@@ -11,7 +11,7 @@ from loguru import logger
 class VisualizationTools:
     """Custom tools for creating financial data visualizations"""
     
-    @tool
+    
     def create_category_pie_chart(self, category_data: Dict[str, float]) -> Dict[str, Any]:
         """Create pie chart for category-wise spending distribution"""
         try:

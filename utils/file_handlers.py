@@ -1,491 +1,634 @@
 """
-File handling utilities for Finance Manager
+File handling utilities for Finance Manager Categorizer
 
-This module provides comprehensive file handling capabilities including:
-- File validation and security checks
-- File type detection and validation
-- Secure file operations
-- File size and format validation
-- Upload directory management
+This module provides comprehensive file handling capabilities for various
+formats commonly used in financial data processing.
 """
 
 import os
-import re
-import mimetypes
-import hashlib
-from typing import Optional, Tuple, Dict, Any, List
+import tempfile
+import shutil
 from pathlib import Path
-import magic
-from werkzeug.utils import secure_filename as werkzeug_secure_filename
+from typing import Dict, Any, Optional, List, Union, BinaryIO
+import mimetypes
+from datetime import datetime
+import hashlib
 
-class FileTypeDetector:
-    """Advanced file type detection using multiple methods"""
-    
-    MIME_TYPE_MAP = {
-        'text/csv': '.csv',
-        'application/vnd.ms-excel': '.xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-        'application/pdf': '.pdf',
-        'text/plain': '.txt'
-    }
-    
-    MAGIC_SIGNATURES = {
-        b'\x50\x4B\x03\x04': '.xlsx',  # ZIP signature (xlsx files)
-        b'\xD0\xCF\x11\xE0': '.xls',   # MS Office signature
-        b'%PDF': '.pdf',               # PDF signature
-    }
-    
-    @classmethod
-    def detect_file_type(cls, file_content: bytes, filename: str) -> Tuple[str, float]:
-        """
-        Detect file type using multiple methods
-        
-        Args:
-            file_content: Raw file content
-            filename: Original filename
-            
-        Returns:
-            Tuple of (file_extension, confidence_score)
-        """
-        confidence_scores = {}
-        
-        # Method 1: File extension
-        ext_from_filename = cls._get_extension_from_filename(filename)
-        if ext_from_filename:
-            confidence_scores[ext_from_filename] = confidence_scores.get(ext_from_filename, 0) + 0.3
-        
-        # Method 2: MIME type detection
-        try:
-            mime_type = magic.from_buffer(file_content, mime=True)
-            ext_from_mime = cls.MIME_TYPE_MAP.get(mime_type)
-            if ext_from_mime:
-                confidence_scores[ext_from_mime] = confidence_scores.get(ext_from_mime, 0) + 0.4
-        except:
-            pass
-        
-        # Method 3: Magic signatures
-        ext_from_magic = cls._detect_by_magic_signature(file_content)
-        if ext_from_magic:
-            confidence_scores[ext_from_magic] = confidence_scores.get(ext_from_magic, 0) + 0.3
-        
-        # Method 4: Content analysis
-        ext_from_content = cls._detect_by_content_analysis(file_content)
-        if ext_from_content:
-            confidence_scores[ext_from_content] = confidence_scores.get(ext_from_content, 0) + 0.2
-        
-        if confidence_scores:
-            best_match = max(confidence_scores.items(), key=lambda x: x[1])
-            return best_match[0], best_match[1]
-        
-        return '.unknown', 0.0
-    
-    @classmethod
-    def _get_extension_from_filename(cls, filename: str) -> Optional[str]:
-        """Extract file extension from filename"""
-        return Path(filename).suffix.lower() if filename else None
-    
-    @classmethod
-    def _detect_by_magic_signature(cls, file_content: bytes) -> Optional[str]:
-        """Detect file type by magic signature"""
-        for signature, extension in cls.MAGIC_SIGNATURES.items():
-            if file_content.startswith(signature):
-                return extension
-        return None
-    
-    @classmethod
-    def _detect_by_content_analysis(cls, file_content: bytes) -> Optional[str]:
-        """Detect file type by analyzing content patterns"""
-        try:
-            # Try to decode as text for CSV detection
-            text_content = file_content.decode('utf-8', errors='ignore')[:1000]
-            
-            # CSV patterns
-            if cls._looks_like_csv(text_content):
-                return '.csv'
-                
-            # PDF patterns
-            if b'%PDF' in file_content[:100]:
-                return '.pdf'
-                
-        except:
-            pass
-        
-        return None
-    
-    @classmethod
-    def _looks_like_csv(cls, text: str) -> bool:
-        """Check if text content looks like CSV"""
-        lines = text.split('\n')[:5]  # Check first 5 lines
-        
-        for line in lines:
-            if line.strip():
-                # Check for common CSV patterns
-                if ',' in line and len(line.split(',')) > 1:
-                    return True
-                    
-        return False
-
-
-class FileValidator:
-    """Comprehensive file validation"""
-    
-    ALLOWED_EXTENSIONS = {'.csv', '.xlsx', '.xls', '.pdf'}
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-    MIN_FILE_SIZE = 10  # 10 bytes
-    
-    DANGEROUS_EXTENSIONS = {'.exe', '.bat', '.cmd', '.com', '.scr', '.vbs', '.js', '.jar', '.pif'}
-    
-    @classmethod
-    def validate_file(cls, file_content: bytes, filename: str, max_size: Optional[int] = None) -> Dict[str, Any]:
-        """
-        Comprehensive file validation
-        
-        Args:
-            file_content: Raw file content
-            filename: Original filename
-            max_size: Maximum allowed file size (optional)
-            
-        Returns:
-            Dict with validation results
-        """
-        validation_result = {
-            'is_valid': True,
-            'errors': [],
-            'warnings': [],
-            'file_info': {},
-            'security_check': True
-        }
-        
-        # Basic validations
-        if not file_content:
-            validation_result['is_valid'] = False
-            validation_result['errors'].append('File is empty')
-            return validation_result
-        
-        if not filename:
-            validation_result['is_valid'] = False
-            validation_result['errors'].append('Filename is required')
-            return validation_result
-        
-        # File size validation
-        file_size = len(file_content)
-        max_allowed_size = max_size or cls.MAX_FILE_SIZE
-        
-        if file_size < cls.MIN_FILE_SIZE:
-            validation_result['is_valid'] = False
-            validation_result['errors'].append(f'File too small: {file_size} bytes')
-        
-        if file_size > max_allowed_size:
-            validation_result['is_valid'] = False
-            validation_result['errors'].append(f'File too large: {file_size} bytes (max: {max_allowed_size} bytes)')
-        
-        # Security checks
-        security_issues = cls._perform_security_checks(file_content, filename)
-        if security_issues:
-            validation_result['is_valid'] = False
-            validation_result['security_check'] = False
-            validation_result['errors'].extend(security_issues)
-        
-        # File type validation
-        detected_type, confidence = FileTypeDetector.detect_file_type(file_content, filename)
-        
-        if detected_type not in cls.ALLOWED_EXTENSIONS:
-            validation_result['is_valid'] = False
-            validation_result['errors'].append(f'Unsupported file type: {detected_type}')
-        
-        if confidence < 0.5:
-            validation_result['warnings'].append(f'Low confidence in file type detection: {confidence:.2f}')
-        
-        # Store file information
-        validation_result['file_info'] = {
-            'filename': filename,
-            'size': file_size,
-            'detected_type': detected_type,
-            'confidence': confidence,
-            'secure_filename': secure_filename(filename)
-        }
-        
-        return validation_result
-    
-    @classmethod
-    def _perform_security_checks(cls, file_content: bytes, filename: str) -> List[str]:
-        """Perform security checks on the file"""
-        issues = []
-        
-        # Check for dangerous file extensions
-        extension = Path(filename).suffix.lower()
-        if extension in cls.DANGEROUS_EXTENSIONS:
-            issues.append(f'Dangerous file extension: {extension}')
-        
-        # Check for executable signatures
-        if cls._has_executable_signature(file_content):
-            issues.append('File appears to be executable')
-        
-        # Check for suspicious patterns
-        if cls._has_suspicious_patterns(file_content):
-            issues.append('File contains suspicious patterns')
-        
-        return issues
-    
-    @classmethod
-    def _has_executable_signature(cls, file_content: bytes) -> bool:
-        """Check if file has executable signatures"""
-        executable_signatures = [
-            b'MZ',      # DOS/Windows executable
-            b'\x7fELF', # Linux executable
-            b'\xca\xfe\xba\xbe',  # Java class file
-        ]
-        
-        for signature in executable_signatures:
-            if file_content.startswith(signature):
-                return True
-        
-        return False
-    
-    @classmethod
-    def _has_suspicious_patterns(cls, file_content: bytes) -> bool:
-        """Check for suspicious patterns in file content"""
-        try:
-            # Check first 1KB for suspicious patterns
-            sample = file_content[:1024].decode('utf-8', errors='ignore').lower()
-            
-            suspicious_patterns = [
-                'script',
-                'javascript',
-                'vbscript',
-                'powershell',
-                'cmd.exe',
-                'system(',
-                'exec(',
-                'eval('
-            ]
-            
-            for pattern in suspicious_patterns:
-                if pattern in sample:
-                    return True
-                    
-        except:
-            pass
-        
-        return False
-
+import pandas as pd
+import PyPDF2
+import pdfplumber
+from openpyxl import load_workbook
+from loguru import logger
 
 class FileHandler:
-    """Main file handler class with comprehensive file operations"""
+    """Comprehensive file handling utilities"""
     
-    def __init__(self, upload_dir: str = './uploads'):
-        self.upload_dir = Path(upload_dir)
-        self.upload_dir.mkdir(parents=True, exist_ok=True)
+    SUPPORTED_EXTENSIONS = {'.csv', '.xlsx', '.xls', '.pdf'}
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
     
-    def save_file(self, file_content: bytes, filename: str, validate: bool = True) -> Dict[str, Any]:
+    def __init__(self, temp_dir: Optional[str] = None):
         """
-        Save file with validation and security checks
+        Initialize FileHandler
         
         Args:
-            file_content: Raw file content
-            filename: Original filename
-            validate: Whether to perform validation
+            temp_dir: Optional temporary directory for file operations
+        """
+        self.temp_dir = temp_dir or tempfile.gettempdir()
+        
+    def validate_file(self, file_path: str, max_size: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Validate uploaded file for processing
+        
+        Args:
+            file_path: Path to the file to validate
+            max_size: Maximum allowed file size in bytes
             
         Returns:
-            Dict with save results
+            Dict containing validation results
         """
-        result = {
-            'success': False,
-            'file_path': None,
-            'file_id': None,
-            'errors': [],
-            'file_info': {}
-        }
-        
         try:
-            # Validate file if requested
-            if validate:
-                validation = FileValidator.validate_file(file_content, filename)
-                if not validation['is_valid']:
-                    result['errors'] = validation['errors']
-                    return result
-                
-                result['file_info'] = validation['file_info']
-                filename = validation['file_info']['secure_filename']
-            
-            # Generate unique filename
-            file_id = self._generate_file_id(file_content, filename)
-            secure_name = f"{file_id}_{secure_filename(filename)}"
-            file_path = self.upload_dir / secure_name
-            
-            # Save file
-            with open(file_path, 'wb') as f:
-                f.write(file_content)
-            
-            result.update({
-                'success': True,
-                'file_path': str(file_path),
-                'file_id': file_id,
-                'file_info': {
-                    'original_filename': filename,
-                    'secure_filename': secure_name,
-                    'size': len(file_content),
-                    'saved_at': str(file_path)
+            if not os.path.exists(file_path):
+                return {
+                    'valid': False,
+                    'error': 'File does not exist',
+                    'error_code': 'FILE_NOT_FOUND'
                 }
-            })
+            
+            # Check file size
+            file_size = os.path.getsize(file_path)
+            max_allowed = max_size or self.MAX_FILE_SIZE
+            
+            if file_size > max_allowed:
+                return {
+                    'valid': False,
+                    'error': f'File too large: {file_size} bytes (max: {max_allowed})',
+                    'error_code': 'FILE_TOO_LARGE',
+                    'file_size': file_size,
+                    'max_size': max_allowed
+                }
+            
+            # Check file extension
+            file_extension = Path(file_path).suffix.lower()
+            if file_extension not in self.SUPPORTED_EXTENSIONS:
+                return {
+                    'valid': False,
+                    'error': f'Unsupported file type: {file_extension}',
+                    'error_code': 'UNSUPPORTED_FORMAT',
+                    'supported_formats': list(self.SUPPORTED_EXTENSIONS)
+                }
+            
+            # Check if file is readable
+            try:
+                with open(file_path, 'rb') as f:
+                    f.read(1024)  # Try to read first 1KB
+            except Exception as e:
+                return {
+                    'valid': False,
+                    'error': f'File is not readable: {str(e)}',
+                    'error_code': 'FILE_NOT_READABLE'
+                }
+            
+            # Detect MIME type
+            mime_type, encoding = mimetypes.guess_type(file_path)
+            
+            return {
+                'valid': True,
+                'file_size': file_size,
+                'file_extension': file_extension,
+                'mime_type': mime_type,
+                'encoding': encoding,
+                'readable': True
+            }
             
         except Exception as e:
-            result['errors'].append(f'Error saving file: {str(e)}')
-        
-        return result
+            logger.error(f"File validation failed: {str(e)}")
+            return {
+                'valid': False,
+                'error': f'Validation failed: {str(e)}',
+                'error_code': 'VALIDATION_ERROR'
+            }
     
-    def load_file(self, file_path: str) -> Tuple[Optional[bytes], Optional[str]]:
+    def get_file_info(self, file_path: str) -> Dict[str, Any]:
         """
-        Load file from disk
+        Get comprehensive file information
         
         Args:
             file_path: Path to the file
             
         Returns:
-            Tuple of (file_content, error_message)
+            Dict containing file information
         """
         try:
-            path = Path(file_path)
-            if not path.exists():
-                return None, f'File not found: {file_path}'
+            if not os.path.exists(file_path):
+                return {'error': 'File does not exist'}
             
-            if not path.is_file():
-                return None, f'Path is not a file: {file_path}'
+            stat_info = os.stat(file_path)
+            file_path_obj = Path(file_path)
             
-            with open(path, 'rb') as f:
-                content = f.read()
+            # Calculate file hash for integrity checking
+            file_hash = self._calculate_file_hash(file_path)
             
-            return content, None
+            return {
+                'filename': file_path_obj.name,
+                'stem': file_path_obj.stem,
+                'suffix': file_path_obj.suffix,
+                'size': stat_info.st_size,
+                'size_human': self._format_file_size(stat_info.st_size),
+                'created_time': datetime.fromtimestamp(stat_info.st_ctime),
+                'modified_time': datetime.fromtimestamp(stat_info.st_mtime),
+                'accessed_time': datetime.fromtimestamp(stat_info.st_atime),
+                'permissions': oct(stat_info.st_mode)[-3:],
+                'is_readable': os.access(file_path, os.R_OK),
+                'is_writable': os.access(file_path, os.W_OK),
+                'absolute_path': file_path_obj.absolute(),
+                'file_hash': file_hash,
+                'mime_type': mimetypes.guess_type(file_path)[0]
+            }
             
         except Exception as e:
-            return None, f'Error loading file: {str(e)}'
+            logger.error(f"Failed to get file info: {str(e)}")
+            return {'error': str(e)}
     
-    def delete_file(self, file_path: str) -> Tuple[bool, Optional[str]]:
+    def create_temp_file(self, suffix: str = '', prefix: str = 'finmgr_') -> str:
         """
-        Delete file from disk
+        Create a temporary file for processing
+        
+        Args:
+            suffix: File suffix/extension
+            prefix: File prefix
+            
+        Returns:
+            Path to created temporary file
+        """
+        try:
+            temp_file = tempfile.NamedTemporaryFile(
+                suffix=suffix,
+                prefix=prefix,
+                dir=self.temp_dir,
+                delete=False
+            )
+            temp_file.close()
+            return temp_file.name
+            
+        except Exception as e:
+            logger.error(f"Failed to create temp file: {str(e)}")
+            raise
+    
+    def copy_file(self, source: str, destination: str, overwrite: bool = False) -> Dict[str, Any]:
+        """
+        Copy file with validation and error handling
+        
+        Args:
+            source: Source file path
+            destination: Destination file path
+            overwrite: Whether to overwrite existing destination
+            
+        Returns:
+            Dict with copy operation results
+        """
+        try:
+            if not os.path.exists(source):
+                return {
+                    'success': False,
+                    'error': 'Source file does not exist'
+                }
+            
+            if os.path.exists(destination) and not overwrite:
+                return {
+                    'success': False,
+                    'error': 'Destination file already exists'
+                }
+            
+            # Create destination directory if it doesn't exist
+            dest_dir = Path(destination).parent
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Perform copy
+            shutil.copy2(source, destination)
+            
+            # Verify copy
+            if not os.path.exists(destination):
+                return {
+                    'success': False,
+                    'error': 'Copy operation failed - destination file not created'
+                }
+            
+            source_size = os.path.getsize(source)
+            dest_size = os.path.getsize(destination)
+            
+            if source_size != dest_size:
+                return {
+                    'success': False,
+                    'error': f'Copy verification failed - size mismatch ({source_size} vs {dest_size})'
+                }
+            
+            return {
+                'success': True,
+                'source_path': source,
+                'destination_path': destination,
+                'file_size': dest_size,
+                'copied_at': datetime.now()
+            }
+            
+        except Exception as e:
+            logger.error(f"File copy failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def move_file(self, source: str, destination: str, overwrite: bool = False) -> Dict[str, Any]:
+        """
+        Move file with validation and error handling
+        
+        Args:
+            source: Source file path
+            destination: Destination file path
+            overwrite: Whether to overwrite existing destination
+            
+        Returns:
+            Dict with move operation results
+        """
+        try:
+            # First copy the file
+            copy_result = self.copy_file(source, destination, overwrite)
+            
+            if not copy_result.get('success', False):
+                return copy_result
+            
+            # Then remove the source
+            os.remove(source)
+            
+            return {
+                'success': True,
+                'source_path': source,
+                'destination_path': destination,
+                'file_size': copy_result.get('file_size', 0),
+                'moved_at': datetime.now()
+            }
+            
+        except Exception as e:
+            logger.error(f"File move failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def cleanup_file(self, file_path: str, force: bool = False) -> Dict[str, Any]:
+        """
+        Safely delete a file
+        
+        Args:
+            file_path: Path to file to delete
+            force: Force deletion even if file is not in temp directory
+            
+        Returns:
+            Dict with cleanup results
+        """
+        try:
+            if not os.path.exists(file_path):
+                return {
+                    'success': True,
+                    'message': 'File already does not exist'
+                }
+            
+            # Safety check - only delete files in temp directory unless forced
+            if not force and not file_path.startswith(self.temp_dir):
+                return {
+                    'success': False,
+                    'error': 'File is not in temporary directory - use force=True to delete'
+                }
+            
+            file_info = self.get_file_info(file_path)
+            os.remove(file_path)
+            
+            return {
+                'success': True,
+                'deleted_file': file_path,
+                'file_size': file_info.get('size', 0),
+                'deleted_at': datetime.now()
+            }
+            
+        except Exception as e:
+            logger.error(f"File cleanup failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def read_file_sample(self, file_path: str, sample_size: int = 1024) -> Dict[str, Any]:
+        """
+        Read a sample of the file for analysis
         
         Args:
             file_path: Path to the file
+            sample_size: Number of bytes to read
             
         Returns:
-            Tuple of (success, error_message)
+            Dict containing sample data and analysis
         """
         try:
-            path = Path(file_path)
-            if path.exists():
-                path.unlink()
-                return True, None
+            file_extension = Path(file_path).suffix.lower()
+            
+            if file_extension == '.csv':
+                return self._sample_csv(file_path)
+            elif file_extension in ['.xlsx', '.xls']:
+                return self._sample_excel(file_path)
+            elif file_extension == '.pdf':
+                return self._sample_pdf(file_path)
             else:
-                return False, f'File not found: {file_path}'
+                # Generic binary sample
+                with open(file_path, 'rb') as f:
+                    sample = f.read(sample_size)
+                
+                return {
+                    'file_type': 'binary',
+                    'sample_size': len(sample),
+                    'sample_data': sample[:100],  # First 100 bytes
+                    'is_text': self._is_text_file(sample)
+                }
                 
         except Exception as e:
-            return False, f'Error deleting file: {str(e)}'
+            logger.error(f"Failed to read file sample: {str(e)}")
+            return {'error': str(e)}
     
-    def _generate_file_id(self, file_content: bytes, filename: str) -> str:
-        """Generate unique file ID based on content hash"""
-        hasher = hashlib.sha256()
-        hasher.update(file_content)
-        hasher.update(filename.encode('utf-8'))
-        return hasher.hexdigest()[:16]
+    def _sample_csv(self, file_path: str) -> Dict[str, Any]:
+        """Sample CSV file structure"""
+        try:
+            # Try different encodings
+            encodings = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
+            df = None
+            used_encoding = None
+            
+            for encoding in encodings:
+                try:
+                    df = pd.read_csv(file_path, encoding=encoding, nrows=5)
+                    used_encoding = encoding
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if df is None:
+                return {'error': 'Could not read CSV with any encoding'}
+            
+            return {
+                'file_type': 'csv',
+                'encoding': used_encoding,
+                'columns': list(df.columns),
+                'column_count': len(df.columns),
+                'sample_rows': len(df),
+                'data_types': df.dtypes.to_dict(),
+                'sample_data': df.head(3).to_dict('records')
+            }
+            
+        except Exception as e:
+            return {'error': str(e)}
     
-    def cleanup_old_files(self, days: int = 7) -> int:
+    def _sample_excel(self, file_path: str) -> Dict[str, Any]:
+        """Sample Excel file structure"""
+        try:
+            # Get sheet names
+            excel_file = pd.ExcelFile(file_path)
+            sheet_names = excel_file.sheet_names
+            
+            # Read first sheet sample
+            df = pd.read_excel(file_path, sheet_name=sheet_names[0], nrows=5)
+            
+            return {
+                'file_type': 'excel',
+                'sheet_names': sheet_names,
+                'sheet_count': len(sheet_names),
+                'active_sheet': sheet_names[0],
+                'columns': list(df.columns),
+                'column_count': len(df.columns),
+                'sample_rows': len(df),
+                'data_types': df.dtypes.to_dict(),
+                'sample_data': df.head(3).to_dict('records')
+            }
+            
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def _sample_pdf(self, file_path: str) -> Dict[str, Any]:
+        """Sample PDF file structure"""
+        try:
+            sample_data = {}
+            
+            # Try pdfplumber first
+            try:
+                with pdfplumber.open(file_path) as pdf:
+                    page_count = len(pdf.pages)
+                    first_page = pdf.pages[0] if page_count > 0 else None
+                    
+                    sample_text = ""
+                    tables_found = 0
+                    
+                    if first_page:
+                        sample_text = first_page.extract_text()[:500]  # First 500 chars
+                        tables = first_page.extract_tables()
+                        tables_found = len(tables) if tables else 0
+                    
+                    sample_data.update({
+                        'extraction_method': 'pdfplumber',
+                        'page_count': page_count,
+                        'tables_found': tables_found,
+                        'sample_text': sample_text,
+                        'has_tables': tables_found > 0
+                    })
+                    
+            except Exception as e:
+                # Fallback to PyPDF2
+                try:
+                    with open(file_path, 'rb') as file:
+                        pdf_reader = PyPDF2.PdfReader(file)
+                        page_count = len(pdf_reader.pages)
+                        
+                        sample_text = ""
+                        if page_count > 0:
+                            first_page = pdf_reader.pages[0]
+                            sample_text = first_page.extract_text()[:500]
+                        
+                        sample_data.update({
+                            'extraction_method': 'PyPDF2',
+                            'page_count': page_count,
+                            'sample_text': sample_text,
+                            'fallback_reason': str(e)
+                        })
+                        
+                except Exception as e2:
+                    sample_data['error'] = f"Both PDF methods failed: {str(e2)}"
+            
+            sample_data['file_type'] = 'pdf'
+            return sample_data
+            
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def _calculate_file_hash(self, file_path: str, algorithm: str = 'md5') -> str:
+        """Calculate file hash for integrity checking"""
+        try:
+            hash_func = hashlib.new(algorithm)
+            
+            with open(file_path, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_func.update(chunk)
+            
+            return hash_func.hexdigest()
+            
+        except Exception as e:
+            logger.error(f"Hash calculation failed: {str(e)}")
+            return ""
+    
+    def _format_file_size(self, size_bytes: int) -> str:
+        """Format file size in human readable format"""
+        if size_bytes == 0:
+            return "0 B"
+        
+        size_names = ["B", "KB", "MB", "GB", "TB"]
+        import math
+        i = int(math.floor(math.log(size_bytes, 1024)))
+        p = math.pow(1024, i)
+        s = round(size_bytes / p, 2)
+        return f"{s} {size_names[i]}"
+    
+    def _is_text_file(self, sample: bytes) -> bool:
+        """Check if file appears to be text based on sample"""
+        try:
+            sample.decode('utf-8')
+            return True
+        except UnicodeDecodeError:
+            try:
+                sample.decode('latin-1')
+                return True
+            except UnicodeDecodeError:
+                return False
+
+class SecureFileHandler(FileHandler):
+    """Enhanced FileHandler with additional security features"""
+    
+    DANGEROUS_EXTENSIONS = {'.exe', '.bat', '.cmd', '.scr', '.vbs', '.js', '.jar'}
+    
+    def __init__(self, temp_dir: Optional[str] = None, enable_virus_scan: bool = False):
         """
-        Clean up files older than specified days
+        Initialize SecureFileHandler
         
         Args:
-            days: Number of days to keep files
+            temp_dir: Temporary directory for file operations
+            enable_virus_scan: Whether to enable virus scanning (requires additional setup)
+        """
+        super().__init__(temp_dir)
+        self.enable_virus_scan = enable_virus_scan
+    
+    def validate_file(self, file_path: str, max_size: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Enhanced file validation with security checks
+        
+        Args:
+            file_path: Path to the file to validate
+            max_size: Maximum allowed file size in bytes
             
         Returns:
-            Number of files deleted
+            Dict containing validation results with security analysis
         """
-        deleted_count = 0
-        cutoff_time = Path().stat().st_mtime - (days * 24 * 60 * 60)
+        # Run basic validation first
+        result = super().validate_file(file_path, max_size)
+        
+        if not result.get('valid', False):
+            return result
         
         try:
-            for file_path in self.upload_dir.iterdir():
-                if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
-                    try:
-                        file_path.unlink()
-                        deleted_count += 1
-                    except:
-                        continue
-        except Exception:
-            pass
+            # Additional security checks
+            file_extension = Path(file_path).suffix.lower()
+            
+            # Check for dangerous extensions
+            if file_extension in self.DANGEROUS_EXTENSIONS:
+                result.update({
+                    'valid': False,
+                    'error': f'Potentially dangerous file type: {file_extension}',
+                    'error_code': 'DANGEROUS_FILE_TYPE',
+                    'security_risk': 'high'
+                })
+                return result
+            
+            # Check file content vs extension
+            content_analysis = self._analyze_file_content(file_path, file_extension)
+            if not content_analysis.get('content_matches_extension', True):
+                result.update({
+                    'security_warning': 'File content does not match extension',
+                    'content_analysis': content_analysis,
+                    'security_risk': 'medium'
+                })
+            
+            # Virus scan if enabled
+            if self.enable_virus_scan:
+                scan_result = self._scan_file_for_threats(file_path)
+                result['virus_scan'] = scan_result
+                
+                if scan_result.get('threats_detected', False):
+                    result.update({
+                        'valid': False,
+                        'error': 'Security threats detected in file',
+                        'error_code': 'SECURITY_THREAT',
+                        'security_risk': 'high'
+                    })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Security validation failed: {str(e)}")
+            result['security_error'] = str(e)
+            return result
+    
+    def _analyze_file_content(self, file_path: str, expected_extension: str) -> Dict[str, Any]:
+        """Analyze file content to verify it matches the claimed extension"""
+        try:
+            with open(file_path, 'rb') as f:
+                header = f.read(512)  # Read first 512 bytes
+            
+            # Common file signatures
+            signatures = {
+                '.pdf': [b'%PDF'],
+                '.xlsx': [b'PK\x03\x04'],  # ZIP-based formats
+                '.xls': [b'\xd0\xcf\x11\xe0'],  # OLE format
+                '.csv': []  # CSV doesn't have a specific signature
+            }
+            
+            expected_sigs = signatures.get(expected_extension, [])
+            
+            if not expected_sigs:  # CSV or unknown format
+                return {'content_matches_extension': True, 'analysis': 'No signature check available'}
+            
+            for sig in expected_sigs:
+                if header.startswith(sig):
+                    return {'content_matches_extension': True, 'matched_signature': sig.hex()}
+            
+            return {
+                'content_matches_extension': False,
+                'expected_signatures': [sig.hex() for sig in expected_sigs],
+                'actual_header': header[:20].hex()
+            }
+            
+        except Exception as e:
+            return {'analysis_error': str(e)}
+    
+    def _scan_file_for_threats(self, file_path: str) -> Dict[str, Any]:
+        """
+        Placeholder for virus scanning functionality
+        In a real implementation, this would integrate with antivirus APIs
+        """
+        # This is a placeholder - in production, you'd integrate with:
+        # - ClamAV
+        # - VirusTotal API
+        # - Windows Defender API
+        # - Other security scanning services
         
-        return deleted_count
+        return {
+            'scan_performed': False,
+            'threats_detected': False,
+            'message': 'Virus scanning not implemented - placeholder only',
+            'recommendation': 'Implement proper virus scanning for production use'
+        }
 
-
-# Utility functions
-def secure_filename(filename: str) -> str:
-    """
-    Make filename secure by removing/replacing dangerous characters
-    
-    Args:
-        filename: Original filename
-        
-    Returns:
-        Secure filename
-    """
-    if not filename:
-        return 'unnamed_file'
-    
-    # Use werkzeug's secure_filename as base
-    secure_name = werkzeug_secure_filename(filename)
-    
-    # Additional security measures
-    secure_name = re.sub(r'[^\w\s\-_\.]', '', secure_name)
-    secure_name = re.sub(r'[-\s]+', '_', secure_name)
-    
-    # Ensure filename is not empty and has reasonable length
-    if not secure_name:
-        secure_name = 'unnamed_file'
-    
-    if len(secure_name) > 100:
-        name, ext = os.path.splitext(secure_name)
-        secure_name = name[:95] + ext
-    
-    return secure_name
-
-
-def get_file_extension(filename: str) -> str:
-    """Get file extension from filename"""
-    return Path(filename).suffix.lower() if filename else ''
-
-
-def validate_file_size(file_size: int, max_size: Optional[int] = None) -> Tuple[bool, Optional[str]]:
-    """
-    Validate file size
-    
-    Args:
-        file_size: Size of file in bytes
-        max_size: Maximum allowed size (optional)
-        
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    max_allowed = max_size or (10 * 1024 * 1024)  # 10MB default
-    
-    if file_size <= 0:
-        return False, 'File is empty'
-    
-    if file_size > max_allowed:
-        return False, f'File size {file_size} bytes exceeds maximum {max_allowed} bytes'
-    
-    return True, None
-
-
-def create_upload_directory(directory: str) -> Tuple[bool, Optional[str]]:
-    """
-    Create upload directory with proper permissions
-    
-    Args:
-        directory: Directory path to create
-        
-    Returns:
-        Tuple of (success, error_message)
-    """
-    try:
-        Path(directory).mkdir(parents=True, exist_ok=True)
-        return True, None
-    except Exception as e:
-        return False, f'Error creating directory: {str(e)}'
+# Create default instances
+file_handler = FileHandler()
+secure_file_handler = SecureFileHandler()

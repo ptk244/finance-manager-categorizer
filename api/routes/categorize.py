@@ -7,6 +7,8 @@ from models.transaction import ProcessedBankStatement, Transaction
 from typing import Optional, List
 from loguru import logger
 
+
+
 router = APIRouter(prefix="/categorize", tags=["Categorization"])
 
 class CategorizationRequest(BaseModel):

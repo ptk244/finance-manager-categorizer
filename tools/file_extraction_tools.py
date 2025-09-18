@@ -11,7 +11,7 @@ import os
 class FileExtractionTools:
     """Custom tools for extracting transaction data from various file formats"""
     
-    @tool
+    
     def extract_csv_data(self, file_path: str) -> Dict[str, Any]:
         """Extract transaction data from CSV files"""
         try:
@@ -98,7 +98,7 @@ class FileExtractionTools:
                 'transactions': []
             }
     
-    @tool
+    
     def extract_excel_data(self, file_path: str) -> Dict[str, Any]:
         """Extract transaction data from Excel files"""
         try:
@@ -142,7 +142,7 @@ class FileExtractionTools:
                 'transactions': []
             }
     
-    @tool
+    
     def extract_pdf_data(self, file_path: str) -> Dict[str, Any]:
         """Extract transaction data from PDF bank statements"""
         try:

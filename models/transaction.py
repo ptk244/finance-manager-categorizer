@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
+
+
 class TransactionType(str, Enum):
     DEBIT = "debit"
     CREDIT = "credit"
@@ -36,6 +38,7 @@ class Transaction(BaseModel):
     balance: Optional[float] = None
     category: Optional[SpendingCategory] = None
     confidence_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+    
 
 class ProcessedBankStatement(BaseModel):
     file_name: str

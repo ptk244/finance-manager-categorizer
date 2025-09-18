@@ -8,6 +8,8 @@ from models.transaction import ProcessedBankStatement, Transaction
 from typing import List, Optional, Dict, Any
 from loguru import logger
 
+
+
 router = APIRouter(prefix="/insights", tags=["Insights"])
 
 class InsightsRequest(BaseModel):
