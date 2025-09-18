@@ -1,13 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from fastapi.responses import JSONResponse
-from models.response_models import FileUploadResponse, ProcessingResponse, APIResponse
-from services.agent_team_service import agent_team_service
-from config.settings import settings
-import aiofiles
 import os
 import uuid
-from loguru import logger
 from typing import Optional
+
+import aiofiles
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+from loguru import logger
+
+from config.settings import settings
+from models.response_models import (APIResponse, FileUploadResponse,
+                                    ProcessingResponse)
+from services.agent_team_service import agent_team_service
 
 router = APIRouter(prefix="/upload", tags=["File Upload"])
 

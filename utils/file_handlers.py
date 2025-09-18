@@ -5,20 +5,21 @@ This module provides comprehensive file handling capabilities for various
 formats commonly used in financial data processing.
 """
 
-import os
-import tempfile
-import shutil
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, BinaryIO
-import mimetypes
-from datetime import datetime
 import hashlib
+import mimetypes
+import os
+import shutil
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import Any, BinaryIO, Dict, List, Optional, Union
 
 import pandas as pd
-import PyPDF2
 import pdfplumber
-from openpyxl import load_workbook
+import PyPDF2
 from loguru import logger
+from openpyxl import load_workbook
+
 
 class FileHandler:
     """Comprehensive file handling utilities"""

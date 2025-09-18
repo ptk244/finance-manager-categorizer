@@ -1,8 +1,11 @@
-from agno.tools import tool
-from typing import List, Dict, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
+
+from agno.tools import tool
 from loguru import logger
+
 from services.gemini_service import gemini_service
+
 
 class CategorizationTools:
     """Custom tools for transaction categorization with rule-based fallback"""

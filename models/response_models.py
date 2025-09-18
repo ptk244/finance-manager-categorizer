@@ -1,7 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from models.transaction import ProcessedBankStatement, InsightsSummary
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
+
+from models.transaction import InsightsSummary, ProcessedBankStatement
 
 
 class APIResponse(BaseModel):

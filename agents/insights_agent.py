@@ -1,9 +1,13 @@
-from agno.agent import Agent
-from models.transaction import ProcessedBankStatement, CategorySummary, InsightsSummary, Transaction
-from services.gemini_service import gemini_service
-from typing import List, Dict, Any
-from loguru import logger
 import statistics
+from typing import Any, Dict, List
+
+from agno.agent import Agent
+from loguru import logger
+
+from models.transaction import (CategorySummary, InsightsSummary,
+                                ProcessedBankStatement, Transaction)
+from services.gemini_service import gemini_service
+
 
 class InsightsAgent:
     """Agent responsible for generating financial insights using Gemini Flash model"""

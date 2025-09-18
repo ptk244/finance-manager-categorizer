@@ -1,9 +1,13 @@
+from typing import Any, Dict, List
+
 from agno.agent import Agent
-from tools.categorization_tools import categorization_tools
-from models.transaction import Transaction, ProcessedBankStatement, SpendingCategory
-from services.gemini_service import gemini_service
-from typing import List, Dict, Any
 from loguru import logger
+
+from models.transaction import (ProcessedBankStatement, SpendingCategory,
+                                Transaction)
+from services.gemini_service import gemini_service
+from tools.categorization_tools import categorization_tools
+
 
 class CategorizerAgent:
     """Agent responsible for categorizing transactions using Gemini Pro model"""

@@ -1,14 +1,17 @@
 # backend/services/agent_team_service.py
 
-from agno.team import Team
+import asyncio
+from typing import Any, Dict
+
 from agno.agent import Agent
-from agents.file_processor_agent import file_processor_agent
+from agno.team import Team
+from loguru import logger
+
 from agents.categorizer_agent import categorizer_agent
+from agents.file_processor_agent import file_processor_agent
 from agents.insights_agent import insights_agent
 from tools.visualization_tools import visualization_tools
-from typing import Dict, Any
-from loguru import logger
-import asyncio
+
 
 class AgentTeamService:
     """Service to orchestrate the multi-agent system for finance management"""

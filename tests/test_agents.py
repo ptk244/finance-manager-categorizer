@@ -2,25 +2,28 @@
 Test script for all AI agents functionality
 """
 import asyncio
-import sys
-import os
-from pathlib import Path
-import tempfile
 import csv
-from datetime import datetime, timedelta
 import json
+import os
+import sys
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from agents.file_processor_agent import file_processor_agent
-from agents.categorizer_agent import categorizer_agent
-from agents.insights_agent import insights_agent
-from services.agent_team_service import agent_team_service
-from models.transaction import Transaction, ProcessedBankStatement, TransactionType, SpendingCategory
-from config.settings import settings
 from loguru import logger
+
+from agents.categorizer_agent import categorizer_agent
+from agents.file_processor_agent import file_processor_agent
+from agents.insights_agent import insights_agent
+from config.settings import settings
+from models.transaction import (ProcessedBankStatement, SpendingCategory,
+                                Transaction, TransactionType)
+from services.agent_team_service import agent_team_service
+
 
 class AgentTestSuite:
     """Comprehensive test suite for all agents"""
@@ -278,10 +281,10 @@ class AgentTestSuite:
         print("\n🛠️  Testing Custom Tools...")
         
         try:
-            from tools.file_extraction_tools import file_extraction_tools
             from tools.categorization_tools import categorization_tools
+            from tools.file_extraction_tools import file_extraction_tools
             from tools.visualization_tools import visualization_tools
-            
+
             # Test file extraction tool
             sample_file = self.create_sample_csv()
             extraction_result = file_extraction_tools.extract_csv_data(sample_file)

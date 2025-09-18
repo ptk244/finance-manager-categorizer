@@ -1,10 +1,12 @@
-import google.generativeai as genai
-from config.settings import settings
-from typing import Dict, Any, List
 import json
+import re
+from typing import Any, Dict, List
+
+import google.generativeai as genai
 from loguru import logger
 
-import re
+from config.settings import settings
+
 
 def extract_json(text: str) -> dict:
     """Extract and parse JSON object from Gemini response text."""

@@ -2,18 +2,21 @@
 Test script to verify Gemini API connectivity and functionality
 """
 import asyncio
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from services.gemini_service import gemini_service
-from config.settings import settings
-from loguru import logger
 import json
+
+from loguru import logger
+
+from config.settings import settings
+from services.gemini_service import gemini_service
+
 
 async def test_gemini_connection():
     """Test basic Gemini API connection"""

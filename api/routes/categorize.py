@@ -1,13 +1,13 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from models.response_models import CategorizationResponse, APIResponse
-from services.agent_team_service import agent_team_service
-from agents.categorizer_agent import categorizer_agent
-from models.transaction import ProcessedBankStatement, Transaction
-from typing import Optional, List
 from loguru import logger
+from pydantic import BaseModel
 
-
+from agents.categorizer_agent import categorizer_agent
+from models.response_models import APIResponse, CategorizationResponse
+from models.transaction import ProcessedBankStatement, Transaction
+from services.agent_team_service import agent_team_service
 
 router = APIRouter(prefix="/categorize", tags=["Categorization"])
 

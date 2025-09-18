@@ -1,12 +1,15 @@
+import os
+from datetime import datetime
+from typing import Any, Dict, List
+
 from agno.agent import Agent
 from agno.tools.file import FileTools
-from tools.file_extraction_tools import file_extraction_tools
-from models.transaction import Transaction, ProcessedBankStatement, TransactionType
-from typing import List, Dict, Any
-from datetime import datetime
 from loguru import logger
-import os
+
+from models.transaction import (ProcessedBankStatement, Transaction,
+                                TransactionType)
 from tools.file_extraction_tools import file_extraction_tools
+
 
 class FileProcessorAgent:
     """Agent responsible for processing uploaded files and extracting transaction data"""

@@ -1,14 +1,15 @@
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from models.response_models import InsightsResponse, VisualizationResponse, APIResponse
-from services.agent_team_service import agent_team_service
-from agents.insights_agent import insights_agent
-from tools.visualization_tools import visualization_tools
-from models.transaction import ProcessedBankStatement, Transaction
-from typing import List, Optional, Dict, Any
 from loguru import logger
+from pydantic import BaseModel
 
-
+from agents.insights_agent import insights_agent
+from models.response_models import (APIResponse, InsightsResponse,
+                                    VisualizationResponse)
+from models.transaction import ProcessedBankStatement, Transaction
+from services.agent_team_service import agent_team_service
+from tools.visualization_tools import visualization_tools
 
 router = APIRouter(prefix="/insights", tags=["Insights"])
 

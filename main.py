@@ -1,28 +1,24 @@
 
+import os
+import sys
+from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import uvicorn
-import os
-
-# Import configuration
-from config.settings import settings
-
-# Import API routes
-from api.routes import upload, categorize, insights
-
-# Import services
-from services.gemini_service import gemini_service
-from services.agent_team_service import agent_team_service
-
-# Import models
-from models.response_models import HealthCheckResponse, APIResponse
-
 # Import logging
 from loguru import logger
-import sys
+
+# Import API routes
+from api.routes import categorize, insights, upload
+# Import configuration
+from config.settings import settings
+# Import models
+from models.response_models import APIResponse, HealthCheckResponse
+from services.agent_team_service import agent_team_service
+# Import services
+from services.gemini_service import gemini_service
 
 # Configure logging
 logger.remove()
@@ -152,7 +148,7 @@ async def root():
         }
     )
 
-@app.get("/health", response_model=HealthCheckResponse)
+@app.get("/api/v1/health", response_model=HealthCheckResponse)
 async def health_check():
     """Health check endpoint"""
     try:
@@ -193,6 +189,7 @@ async def get_api_status():
         
         # System information
         import platform
+
         import psutil
         
         system_info = {
