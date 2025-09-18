@@ -1,4 +1,4 @@
-from agno import Tool
+from agno.tools import tool
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -11,7 +11,7 @@ from loguru import logger
 class VisualizationTools:
     """Custom tools for creating financial data visualizations"""
     
-    @Tool
+    @tool
     def create_category_pie_chart(self, category_data: Dict[str, float]) -> Dict[str, Any]:
         """Create pie chart for category-wise spending distribution"""
         try:
@@ -59,7 +59,7 @@ class VisualizationTools:
             logger.error(f"Pie chart creation failed: {str(e)}")
             return {'error': str(e)}
     
-    @Tool
+    @tool
     def create_spending_timeline(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create timeline visualization of spending patterns"""
         try:
@@ -131,7 +131,7 @@ class VisualizationTools:
             logger.error(f"Timeline chart creation failed: {str(e)}")
             return {'error': str(e)}
     
-    @Tool
+    @tool
     def create_top_transactions_chart(self, transactions: List[Dict[str, Any]], top_n: int = 10) -> Dict[str, Any]:
         """Create bar chart for top transactions"""
         try:
@@ -181,7 +181,7 @@ class VisualizationTools:
             logger.error(f"Top transactions chart creation failed: {str(e)}")
             return {'error': str(e)}
     
-    @Tool
+    @tool
     def create_category_comparison_chart(self, category_data: Dict[str, float]) -> Dict[str, Any]:
         """Create horizontal bar chart for category comparison"""
         try:
@@ -230,7 +230,7 @@ class VisualizationTools:
             logger.error(f"Category comparison chart creation failed: {str(e)}")
             return {'error': str(e)}
     
-    @Tool
+    @tool
     def create_income_vs_expense_chart(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create income vs expense comparison chart"""
         try:
@@ -281,7 +281,7 @@ class VisualizationTools:
             logger.error(f"Income vs expense chart creation failed: {str(e)}")
             return {'error': str(e)}
     
-    @Tool
+    @tool
     def create_comprehensive_dashboard(self, transactions: List[Dict[str, Any]], category_data: Dict[str, float]) -> Dict[str, Any]:
         """Create a comprehensive financial dashboard"""
         try:

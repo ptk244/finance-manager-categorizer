@@ -4,6 +4,24 @@ from typing import Dict, Any, List
 import json
 from loguru import logger
 
+import re
+
+def extract_json(text: str) -> dict:
+    """Extract and parse JSON object from Gemini response text."""
+    try:
+        # Try direct JSON load
+        return json.loads(text)
+    except Exception:
+        # Fallback: extract JSON substring
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except Exception:
+                pass
+    return {}
+
+
 class GeminiService:
     def __init__(self):
         genai.configure(api_key=settings.gemini_api_key)
@@ -68,7 +86,7 @@ class GeminiService:
         
         try:
             response = await self.categorization_model.generate_content_async(prompt)
-            result = json.loads(response.text.strip())
+            result = extract_json(response.text.strip())
             return result
         except Exception as e:
             logger.error(f"Categorization failed: {str(e)}")
@@ -117,7 +135,7 @@ class GeminiService:
         
         try:
             response = await self.insights_model.generate_content_async(prompt)
-            result = json.loads(response.text.strip())
+            result = extract_json(response.text.strip())
             return result
         except Exception as e:
             logger.error(f"Insights generation failed: {str(e)}")

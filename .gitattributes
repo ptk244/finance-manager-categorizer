@@ -1,0 +1,8 @@
+# Treat PDF and other binary files as binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.exe binary

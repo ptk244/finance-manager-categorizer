@@ -1,4 +1,4 @@
-from agno import Agent
+from agno.agent import Agent
 from agno.tools.file import FileTools
 from tools.file_extraction_tools import file_extraction_tools
 from models.transaction import Transaction, ProcessedBankStatement, TransactionType
@@ -28,7 +28,7 @@ class FileProcessorAgent:
                 FileTools(),  # Agno's built-in file tools
                 file_extraction_tools  # Our custom extraction tools
             ],
-            show_tool_calls=True,
+            # show_tool_calls=True,
             debug_mode=True
         )
     

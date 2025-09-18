@@ -1,4 +1,4 @@
-from agno import Agent
+from agno.agent import Agent
 from models.transaction import ProcessedBankStatement, CategorySummary, InsightsSummary, Transaction
 from services.gemini_service import gemini_service
 from typing import List, Dict, Any
@@ -24,7 +24,7 @@ class InsightsAgent:
                 "Consider seasonal patterns and lifestyle factors."
             ],
             model=f"gemini/{gemini_service.insights_model.model_name}",
-            show_tool_calls=True,
+            # show_tool_calls=True,
             debug_mode=True
         )
     

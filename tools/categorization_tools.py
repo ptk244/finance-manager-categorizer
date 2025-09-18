@@ -1,4 +1,4 @@
-from agno import Tool
+from agno.tools import tool
 from typing import List, Dict, Any, Optional
 import re
 from loguru import logger
@@ -81,7 +81,7 @@ class CategorizationTools:
             ]
         }
     
-    @Tool
+    @tool
     async def categorize_single_transaction(self, description: str, amount: float, transaction_type: str) -> Dict[str, Any]:
         """Categorize a single transaction using AI with rule-based fallback"""
         try:
@@ -117,7 +117,7 @@ class CategorizationTools:
                 'method': 'error'
             }
     
-    @Tool
+    @tool
     async def batch_categorize_transactions(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Categorize multiple transactions efficiently"""
         categorized_transactions = []
@@ -145,7 +145,7 @@ class CategorizationTools:
         
         return categorized_transactions
     
-    @Tool
+    @tool
     def validate_and_refine_categories(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate and refine categorization results"""
         refined_transactions = []

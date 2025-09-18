@@ -1,4 +1,4 @@
-from agno import Agent
+from agno.agent import Agent
 from tools.categorization_tools import categorization_tools
 from models.transaction import Transaction, ProcessedBankStatement, SpendingCategory
 from services.gemini_service import gemini_service
@@ -25,7 +25,7 @@ class CategorizerAgent:
             ],
             model=f"gemini/{gemini_service.categorization_model.model_name}",
             tools=[categorization_tools],
-            show_tool_calls=True,
+            # show_tool_calls=True,
             debug_mode=True
         )
     
