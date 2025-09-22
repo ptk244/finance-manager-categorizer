@@ -10,8 +10,8 @@ class Transaction(BaseModel):
     """Base transaction model"""
     transaction_date: date | str = Field(..., description="Transaction date")
     description: str = Field(..., description="Transaction description/narration")
-    amount: float = Field(..., description="Transaction amount")
-    type: str = Field(..., description="Transaction type (debit/credit)")
+    amount: Optional[float] = None  # Allow None for B/F entries
+    type: Optional[str] = None
     balance: Optional[float] = Field(None, description="Account balance after transaction")
     reference: Optional[str] = Field(None, description="Transaction reference number")
 

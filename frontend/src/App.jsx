@@ -31,9 +31,6 @@ import { financeAPI } from './services/api';
 import { 
   formatCurrency, 
   calculateCategoryTotals, 
-  processCategorySummary,
-  parseTransactionAmount,
-  formatIndianNumber
 } from './utils/helpers';
 function App() {
   // State management
@@ -236,9 +233,12 @@ function App() {
   // Stats Cards Component
   const StatsCards = () => {
   
-  const totalIncome = categorizedTransactions
-    .filter(t => t.type === "credit")
-    .reduce((sum, t) => sum + t.amount, 0);
+  // const totalIncome = categorizedTransactions
+  //   .filter(t => t.type === "credit")
+  //   .reduce((sum, t) => sum + t.amount, 0);
+
+  const lastTransaction = categorizedTransactions[categorizedTransactions.length - 1];
+  const totalIncome = lastTransaction.balance;
 
   const totalExpenses = categorizedTransactions
     .filter(t => t.type === "debit")
@@ -248,7 +248,7 @@ function App() {
   const categoryCount = Object.keys(categorySummary).length;
 
   const stats = [
-    { title: "Total Income", value: formatCurrency(totalIncome), icon: TrendingUp, color: "green" },
+    { title: "Current Balance", value: formatCurrency(totalIncome), icon: TrendingUp, color: "green" },
     { title: "Total Expenses", value: formatCurrency(totalExpenses), icon: Wallet, color: "red" },
     { title: "Transactions", value: transactionCount.toString(), icon: FileText, color: "blue" },
     { title: "Categories", value: categoryCount.toString(), icon: PieChart, color: "purple" },
